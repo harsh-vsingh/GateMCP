@@ -1,34 +1,61 @@
-# Dynamic LangGraph Assistant with HITL & MCP
+# GateGraph: Human-Gated Agent with Dynamic MCP Registry
 
-A modular, production-ready AI assistant platform featuring a **Human-In-The-Loop (HITL)** approval system, local **RAG** capabilities, and dynamic **Model Context Protocol (MCP)** tool management. This project is optimized for local execution using Ollama on Arch Linux.
+A locally hosted AI agent system that enforces **human-controlled tool execution** and supports **runtime MCP plugin registration**. Designed as a control layer over LLM agents, enabling safe, extensible, and stateful interactions.
 
 ---
 
 ## 🚀 Overview
 
-This project is built as a 3-tier application to provide a seamless interface for interacting with local LLMs while maintaining strict control over tool execution.
+This project implements a **human-gated agent architecture** where all external tool executions are explicitly controlled, and capabilities can be extended at runtime via a dynamic MCP registry.
 
-* **Frontend**: A Streamlit application providing a real-time chat interface and a management dashboard for tools.
-* **Backend**: A FastAPI server that orchestrates the LangGraph state machine and serves as a gateway for tool orchestration.
-* **Agent Layer**: A LangGraph workflow that handles decision-making, tool calling, and state persistence via PostgreSQL.
+Unlike standard agent pipelines, this system introduces a **control layer** between decision-making and execution, ensuring safe and auditable interactions.
+
+The system is structured as a 3-tier architecture:
+
+- **Frontend**: Streamlit interface for chat, HITL approvals, and MCP tool management  
+- **Backend**: FastAPI service orchestrating execution, state management, and tool routing  
+- **Agent Layer**: LangGraph workflow with pause/resume execution, tool planning, and PostgreSQL-backed persistence  
 
 ---
 
 ## ✨ Features
 
-### 🛠️ Dynamic MCP Tool Management
-Add or remove Model Context Protocol (MCP) servers at runtime. The backend automatically re-compiles the agent's logic to incorporate new tools (via Stdio or SSE) without requiring a process restart.
-
-### 🛡️ Human-In-The-Loop (HITL)
-Safety-first execution. The agent interrupts before calling sensitive tools, allowing the user to inspect, approve, or deny the action directly from the chat UI.
-
-### 📚 Local RAG Pipeline
-Ingest PDFs into a local Chroma vector database using `nomic-embed-text` embeddings. The agent can retrieve this information using the `query_knowledge_base` tool to provide context-aware answers.
-
-### 💾 Persistent Conversations
-Multi-threaded chat history is preserved across sessions using an `AsyncPostgresSaver` checkpointer, allowing you to resume any conversation by its `thread_id`.
+### 🛡️ Human-Gated Execution Layer
+- Intercepts tool calls before execution  
+- Supports pause/resume within agent workflow  
+- Enables explicit approval or denial of actions  
+- Forms a control boundary between LLM decisions and real-world effects  
 
 ---
+
+### 🛠️ Dynamic MCP Registry (Hot Reload)
+- Register MCP tools at runtime via JSON configs  
+- Automatically reloads and recompiles the agent graph  
+- Supports extensible capabilities without restarting the system 
+- Strict schema validation for all tool definitions 
+
+---
+
+### 📚 Local RAG Integration
+- PDF ingestion → chunking → embeddings (`nomic-embed-text`)  
+- Stored in local ChromaDB  
+- Retrieved via `query_knowledge_base` tool  
+
+---
+
+### 💾 Persistent Stateful Execution
+- PostgreSQL-backed checkpointing using `AsyncPostgresSaver`  
+- Multi-session support via `thread_id`  
+- Enables resumable agent workflows  
+
+---
+
+### 🔄 Controlled Tool-Oriented Agent Design
+- Clear separation:
+  - Decision layer (LLM)
+  - Execution layer (tools via MCP)
+  - Control layer (HITL gating)  
+- Designed for safe tool use in autonomous systems  
 
 ## 📂 Project Structure
 
