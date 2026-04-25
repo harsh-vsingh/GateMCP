@@ -203,7 +203,7 @@ if uploaded_file:
             else:
                 st.sidebar.error("Failed to index file.")
 
-if st.sidebar.button("🔄 Sync & Update Tools"):
+if st.sidebar.button("🔄 Update Tools"):
     with st.sidebar.spinner("Rebuilding Graph..."):
         resp = requests.post(f"{BACKEND_URL}/mcp/refresh")
         st.sidebar.success("Agent Tools Updated!")

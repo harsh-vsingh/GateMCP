@@ -8,8 +8,9 @@ import backend.graph as graph
 from .graph import setup_db, initialize_graph
 from .utils import (
     get_chat_history, get_all_threads, delete_thread_history, 
-    process_pdf_to_vector_db, get_streaming_response, handle_denial, MCPService
+    process_pdf_to_vector_db, get_streaming_response, handle_denial
 )
+from .mp_service import MCPService
 
 app = FastAPI()
 client = None
