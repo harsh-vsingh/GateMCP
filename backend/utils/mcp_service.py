@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional, List
 import shutil 
 
@@ -10,20 +10,21 @@ BASE_DIR = Path(__file__).parent.parent.resolve()
 MCP_CONFIG_DIR = BASE_DIR / "agent_workspace" / "mcp_servers"
 MCP_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# MCP schema for validation
 class MCPServerSchema(BaseModel):
     transport: str
     command: Optional[str] = None
     args: Optional[List[str]] = None
     url: Optional[str] = None
 
-    @classmethod
+    @classmethod    
     def validate_config(cls, config: dict):
         transport = config.get("transport")
 
         if transport not in {"stdio", "sse", "http", "streamable_http", "streamable-http"}:
-            raise ValueError("Unsupported transport")
+            raise ValueError(f"Unsupported transport: {transport}")
 
-        # Normalize
         transport = transport.replace("-", "_")
 
         # Stdio rules
@@ -86,7 +87,6 @@ class MCPService:
             }
             self.save_server_config("tls", default_tls)
             servers["tls"] = default_tls
-            
         return servers
 
     async def refresh_client(self, config_dict: dict):
@@ -103,15 +103,16 @@ class MCPService:
     async def validate_server(self, config_dict: dict):
         """Pre-save validation to prevent graph crashes."""
         # 1. Schema Check 
+        MCPServerSchema.validate_config(config_dict)
         srv = MCPServerSchema(**config_dict)
         
         # 2. Connectivity Check
         if srv.transport == "stdio":
             if not shutil.which(srv.command):
                 raise ValueError(f"System error: '{srv.command}' is not an executable command.")
-        elif srv.transport == "sse":
+        elif srv.transport in {"sse", "http", "streamable_http", "streamable-http"}:            
             async with httpx.AsyncClient() as client:
-                # Quick ping to ensure the cloud MCP is alive
+                # Ping to ensure the cloud MCP is alive
                 resp = await client.get(str(srv.url), timeout=5.0)
                 resp.raise_for_status()
         return True

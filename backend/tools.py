@@ -4,14 +4,13 @@ import os
 from fastmcp import FastMCP
 from tavily import TavilyClient
 from dotenv import load_dotenv
-import aiofiles
-from pathlib import Path
 
 load_dotenv()
-
-# Tools
 mcp = FastMCP("tls")
 
+# Built in internet and RAG tools
+
+# Internet tool using tavily
 _tavily = None
 def get_client():
     global _tavily
@@ -58,50 +57,7 @@ def search_internet(query: str) -> str:
         return f"Search error: {type(e).__name__} - {str(e)}"
 
 
-
-
-SAFE_DIRECTORY = Path("/home/harsh/projects/chatbot/agent_workspace").resolve()
-SAFE_DIRECTORY.mkdir(parents=True, exist_ok=True)
-
-def is_safe_path(path: str) -> bool:
-    """Check if the resolved path is within the SAFE_DIRECTORY."""
-    try:
-        resolved_path = (SAFE_DIRECTORY / path).resolve()
-        return SAFE_DIRECTORY in resolved_path.parents or resolved_path == SAFE_DIRECTORY
-    except Exception:
-        return False
-    
-@mcp.tool
-async def list_files() -> str:
-    """Lists all files in the allowed workspace."""
-    files = os.listdir(SAFE_DIRECTORY)
-    return "\n".join(files) if files else "Workspace is empty."
-
-@mcp.tool
-async def write_to_file(filename: str, content: str) -> str:
-    """Writes content to a specific file in the workspace."""
-    if not is_safe_path(filename):
-        return "Error: Access denied. You can only write to the designated workspace."
-    
-    file_path = SAFE_DIRECTORY / filename
-    async with aiofiles.open(file_path, mode='w') as f:
-        await f.write(content)
-    return f"Successfully wrote to {filename}"
-
-@mcp.tool
-async def read_from_file(filename: str) -> str:
-    """Reads content from a specific file in the workspace."""
-    if not is_safe_path(filename):
-        return "Error: Access denied. You can only read from the designated workspace."
-    
-    file_path = SAFE_DIRECTORY / filename
-    if not file_path.exists():
-        return f"Error: {filename} does not exist."
-        
-    async with aiofiles.open(file_path, mode='r') as f:
-        content = await f.read()
-    return content
-
+# RAG tool
 @mcp.tool
 async def query_knowledge_base(query: str) -> str:
     """
