@@ -89,40 +89,54 @@ async def delete_thread_history(thread_id):
 async def get_streaming_response(message: str, thread_id: str, is_resume: bool = False):
     from .graph import chatbot
     config = {"configurable": {"thread_id": thread_id}}
-    
     input_data = None if is_resume else {"messages": [("user", message)]}
-    
-    try:
-        async for event in chatbot.astream_events(input_data, config, version="v2"):
-            kind = event["event"]
-            if kind == "on_chat_model_stream":
-                content = event["data"]["chunk"].content
-                if content:
+
+    MAX_RETRIES = 2
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            async for event in chatbot.astream_events(input_data, config, version="v2"):
+                kind = event["event"]
+
+                if kind == "on_chat_model_stream":
+                    content = event["data"]["chunk"].content
+                    if content:
+                        yield json.dumps({
+                            "type": "content",
+                            "content": serialize_content(content)
+                        }) + "\n"
+
+                elif kind == "on_tool_start":
                     yield json.dumps({
-                        "type": "content", 
-                        "content": serialize_content(content)
+                        "type": "tool_start",
+                        "content": event["name"]
                     }) + "\n"
 
-            elif kind == "on_tool_start":
+                elif kind == "on_tool_end":
+                    yield json.dumps({
+                        "type": "tool_end",
+                        "content": event["name"]
+                    }) + "\n"
+
+            state = await chatbot.aget_state(config)
+            if state.next and state.next[0] == "tools":
+                last_msg = state.values["messages"][-1]
+                tool_name = last_msg.tool_calls[0]["name"] if last_msg.tool_calls else "tool"
                 yield json.dumps({
-                    "type": "tool_start", 
-                    "content": event["name"]
+                    "type": "interrupt",
+                    "content": tool_name
                 }) + "\n"
 
-            elif kind == "on_tool_end":
-                yield json.dumps({
-                    "type": "tool_end", 
-                    "content": event["name"]
-                }) + "\n"
-            
-        state = await chatbot.aget_state(config)
-        if state.next and state.next[0] == "tools":
-            last_msg = state.values["messages"][-1]
-            tool_name = last_msg.tool_calls[0]["name"] if last_msg.tool_calls else "tool"
-            yield json.dumps({"type": "interrupt", "content": tool_name}) + "\n"
+            return 
 
-    except Exception as e:
-        yield json.dumps({"type": "error", "content": str(e)}) + "\n"
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                continue
+
+            yield json.dumps({
+                "type": "error",
+                "content": f"Streaming failed after {MAX_RETRIES} attempts: {str(e)}"
+            }) + "\n"
 
 async def handle_denial(thread_id: str):
     """Injects a cancellation message so the LLM knows the user denied the tool."""
