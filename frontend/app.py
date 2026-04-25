@@ -79,7 +79,18 @@ def stream_chatbot_response(message, thread_id):
     except requests.exceptions.RequestException as e:
         st.error(f"Request failed: {e}")
 
-
+def get_pdfs():
+    try:
+        return requests.get(f"{BACKEND_URL}/pdf/list").json().get("files", [])
+    except Exception as e:
+        st.error(f"Failed to fetch PDFs: {e}")
+        return []
+    
+def delete_pdf(filename):
+    try:
+        requests.delete(f"{BACKEND_URL}/pdf/{filename}")
+    except Exception as e:
+        st.error(f"Failed to delete PDF: {e}")
 
 
 #  UI Logic & Handlers 
@@ -198,11 +209,26 @@ st.sidebar.divider()
 if st.sidebar.button("🛠️ Manage Agent Tools", use_container_width=True): manage_mcp_servers()
 
 with st.sidebar.expander("📚 Knowledge Base", expanded=False):
+
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
+
     if uploaded_file and st.button("Index Document", use_container_width=True):
         files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
         requests.post(f"{BACKEND_URL}/upload", files=files)
         st.success("Indexed!")
+        st.rerun()
+
+    st.markdown("### Indexed Documents")
+
+    pdfs = get_pdfs()
+
+    for pdf in pdfs:
+        c1, c2 = st.columns([0.7, 0.3])
+        c1.markdown(pdf[:15] + "...")
+
+        if c2.button("❌", key=f"pdf_del_{pdf}"):
+            delete_pdf(pdf)
+            st.rerun()
 
 st.sidebar.divider()
 st.sidebar.subheader('💬 Conversations')

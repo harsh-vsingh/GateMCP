@@ -78,11 +78,15 @@ async def query_knowledge_base(query: str) -> str:
             embedding_function=embeddings
         )
         
-        docs = vector_db.similarity_search(query, k=3)
+        results = vector_db.similarity_search_with_score(query, k=5)
+
+        threshold = 0.5
+        docs = [doc for doc, score in results if score < threshold]
+        docs = docs[:3]
         
         if not docs:
             return "No relevant information found in the uploaded documents."
-            
+
         return "\n\n---\n\n".join([d.page_content for d in docs])
     except Exception as e:
         return f"Knowledge base error: {str(e)}"

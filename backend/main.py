@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import backend.graph as graph
 from .graph import setup_db, initialize_graph
 from .utils.history import get_chat_history, get_all_threads, delete_thread_history
-from .utils.pdf import process_pdf_to_vector_db
+from .utils.pdf import process_pdf_to_vector_db, delete_pdf_from_vector_db, list_indexed_pdfs
 from .utils.streaming import get_streaming_response, handle_denial
 from .utils.mcp_service import MCPService
 
@@ -102,12 +102,22 @@ async def refresh_mcp():
     return {"status": "refreshed", "active_tools": active_tools}
 
 
-# Chat & RAG Endpoints
+# RAG Endpoints
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     chunks = await process_pdf_to_vector_db(file)
     return {"status": "success", "filename": file.filename, "chunks": chunks}
 
+@app.delete("/pdf/{filename}")
+async def delete_pdf(filename: str):
+    await delete_pdf_from_vector_db(filename)
+    return {"status": "deleted", "filename": filename}
+
+@app.get("/pdf/list")
+async def list_pdfs():
+    return {"files": await list_indexed_pdfs()}
+
+# Chat endpoints
 @app.post("/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
     if graph.chatbot is None:
