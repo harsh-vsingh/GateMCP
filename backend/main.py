@@ -6,10 +6,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import backend.graph as graph
 from .graph import setup_db, initialize_graph
-from utils.history import get_chat_history, get_all_threads, delete_thread_history
-from utils.pdf import process_pdf_to_vector_db
-from utils.streaming import get_streaming_response, handle_denial
-from utils.mcp_service import MCPService
+from .utils.history import get_chat_history, get_all_threads, delete_thread_history
+from .utils.pdf import process_pdf_to_vector_db
+from .utils.streaming import get_streaming_response, handle_denial
+from .utils.mcp_service import MCPService
 
 
 app = FastAPI()

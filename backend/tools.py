@@ -1,12 +1,17 @@
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 import os
-from fastmcp import FastMCP
 from tavily import TavilyClient
 from dotenv import load_dotenv
 
 load_dotenv()
-mcp = FastMCP("tls")
+from pathlib import Path
+from fastmcp import FastMCP
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
+
+SAFE_DIRECTORY = Path(__file__).parent.parent.resolve()
+CHROMA_PATH = SAFE_DIRECTORY / "agent_workspace" /"chroma_db"
 
 # Built in internet and RAG tools
 
@@ -17,6 +22,8 @@ def get_client():
     if _tavily is None:
         _tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
     return _tavily
+
+mcp = FastMCP("tls")
 
 @mcp.tool
 def search_internet(query: str) -> str:
@@ -67,7 +74,7 @@ async def query_knowledge_base(query: str) -> str:
     try:
         embeddings = OllamaEmbeddings(model="nomic-embed-text")
         vector_db = Chroma(
-            persist_directory="/home/harsh/projects/chatbot/agent_workspace/chroma_db",
+            persist_directory=str(CHROMA_PATH),
             embedding_function=embeddings
         )
         

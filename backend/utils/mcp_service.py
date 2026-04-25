@@ -6,10 +6,11 @@ from pydantic import BaseModel
 from typing import Optional, List
 import shutil 
 
-BASE_DIR = Path(__file__).parent.parent.resolve()
+BASE_DIR = Path(__file__).parent.parent.parent.resolve()
 MCP_CONFIG_DIR = BASE_DIR / "agent_workspace" / "mcp_servers"
 MCP_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
+uv_cmd = shutil.which("uv") or "uv"
 
 # MCP schema for validation
 class MCPServerSchema(BaseModel):
@@ -82,8 +83,8 @@ class MCPService:
         if "tls" not in servers:
             default_tls = {
                 "transport": "stdio",
-                "command": "/usr/bin/uv",
-                "args": ["run", "fastmcp", "run", str(BASE_DIR / "backend" / "tools.py")]
+                "command": uv_cmd,
+                "args": ["run", "fastmcp", "run", str(BASE_DIR  / "backend" / "tools.py")]
             }
             self.save_server_config("tls", default_tls)
             servers["tls"] = default_tls
@@ -113,6 +114,13 @@ class MCPService:
         elif srv.transport in {"sse", "http", "streamable_http", "streamable-http"}:            
             async with httpx.AsyncClient() as client:
                 # Ping to ensure the cloud MCP is alive
-                resp = await client.get(str(srv.url), timeout=5.0)
-                resp.raise_for_status()
+                try:
+                    resp = await client.get(str(srv.url), timeout=5.0)
+
+                    # Accept 200 (OK) and 405 (endpoint exists but method not allowed)
+                    if resp.status_code not in (200, 405):
+                        resp.raise_for_status()
+
+                except httpx.RequestError as e:
+                    raise ValueError(f"Connection failed: {e}")
         return True

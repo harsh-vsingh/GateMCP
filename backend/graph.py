@@ -16,15 +16,15 @@ checkpointer = None
 # Postgres checkpointer
 async def setup_db():
     global pool, checkpointer
-    DB_URI = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/langgraph_db")
+    DB_URI = os.getenv("DATABASE_URL")
     pool = AsyncConnectionPool(conninfo=DB_URI, open=False) 
     checkpointer = AsyncPostgresSaver(pool)
     return checkpointer, pool
 
 # LLM setup
 async def get_llm():
-    MODEL_NAME = os.getenv("LLM_MODEL", "qwen3:8b") 
-    MODEL_URL = os.getenv("MODEL_URL", "http://localhost:11434")
+    MODEL_NAME = os.getenv("LLM_MODEL") 
+    MODEL_URL = os.getenv("MODEL_URL")
     llm = ChatOllama(model=MODEL_NAME, temperature=0, base_url=MODEL_URL)
     return llm
 

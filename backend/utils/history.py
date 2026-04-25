@@ -1,14 +1,14 @@
-from ..graph import chatbot, pool
+from .. import graph
 from langchain.messages import HumanMessage, ToolMessage, AIMessage
 
 
 async def get_chat_history(thread_id):
     """Fetches history using the async graph state."""
-    if chatbot is None:
+    if graph.chatbot is None:
         return []
     
     config = {'configurable': {'thread_id': str(thread_id)}}
-    state = await chatbot.aget_state(config=config)
+    state = await graph.chatbot.aget_state(config=config)
     
     if not (state and state.values):
         return []
@@ -27,7 +27,7 @@ async def get_chat_history(thread_id):
 
 async def get_all_threads():
     """Retrieves all unique thread IDs using the async pool."""
-    async with pool.connection() as conn:
+    async with graph.pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute("SELECT DISTINCT thread_id FROM checkpoints")
             rows = await cur.fetchall()
@@ -37,7 +37,7 @@ async def get_all_threads():
 async def delete_thread_history(thread_id):
     """Deletes all checkpoints for a thread using the async pool."""
     thread_id = str(thread_id)  
-    async with pool.connection() as conn:
+    async with graph.pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
             await cur.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))

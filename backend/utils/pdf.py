@@ -5,8 +5,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 
-SAFE_DIRECTORY = Path("/home/harsh/projects/chatbot/agent_workspace").resolve()
-CHROMA_PATH = SAFE_DIRECTORY / "chroma_db"
+SAFE_DIRECTORY = Path(__file__).parent.parent.parent.resolve()
+CHROMA_PATH = SAFE_DIRECTORY / "agent_workspace" /"chroma_db"
 
 
 async def process_pdf_to_vector_db(file):

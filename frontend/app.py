@@ -62,8 +62,12 @@ def stream_chatbot_response(message, thread_id):
                         st.error("Invalid response from server")
                         break
 
-                    if data["type"] == "error":
-                        st.error(f"Backend Error: {data['content']}")
+                    if data["type"] in ("error", "tool_error", "llm_error", "db_error", "system_error"):
+                        if data["type"] == "tool_error":
+                            tool = data.get("tool", "unknown tool")
+                            st.error(f"Error in tool '{tool}': {data['content']}")
+                        else:
+                            st.error(f"Backend Error: {data['content']}")
                         break
 
                     yield data["type"], data["content"]
