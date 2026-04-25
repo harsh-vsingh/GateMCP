@@ -228,11 +228,33 @@ if user_input := st.chat_input('Message GateMCP...'):
 if st.session_state.get('resume_approved') is not None:
     appr = st.session_state.pop('resume_approved')
     def approval_gen():
-        with requests.post(f"{BACKEND_URL}/chat/approve", json={"thread_id": st.session_state['thread_id'], "approved": appr}, stream=True) as r:
-            for line in r.iter_lines():
-                if line:
-                    d = json.loads(line.decode("utf-8"))
-                    yield d["type"], d["content"]
+        try:
+            with requests.post(
+                f"{BACKEND_URL}/chat/approve",
+                json={"thread_id": st.session_state['thread_id'], "approved": appr},
+                stream=True
+            ) as r:
+
+                if r.status_code != 200:
+                    st.error(f"HTTP Error {r.status_code}: {r.text}")
+                    return
+
+                for line in r.iter_lines():
+                    if line:
+                        try:
+                            d = json.loads(line.decode("utf-8"))
+                        except json.JSONDecodeError:
+                            st.error("Invalid response from server")
+                            break
+
+                        if d["type"] == "error":
+                            st.error(f"Backend Error: {d['content']}")
+                            break
+
+                        yield d["type"], d["content"]
+
+        except Exception as e:
+            st.error(f"Approval request failed: {e}")
     process_assistant_stream(approval_gen())
 
 if st.session_state.get('interrupt_pending'):
