@@ -6,17 +6,50 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 import shutil 
 
-# Base directory setup for Arch Linux environment
 BASE_DIR = Path(__file__).parent.parent.resolve()
 MCP_CONFIG_DIR = BASE_DIR / "agent_workspace" / "mcp_servers"
 MCP_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
 class MCPServerSchema(BaseModel):
-    transport: str = Field(pattern="^(stdio|sse)$")
+    transport: str
     command: Optional[str] = None
     args: Optional[List[str]] = None
     url: Optional[str] = None
 
+    @classmethod
+    def validate_config(cls, config: dict):
+        transport = config.get("transport")
+
+        if transport not in {"stdio", "sse", "http", "streamable_http", "streamable-http"}:
+            raise ValueError("Unsupported transport")
+
+        # Normalize
+        transport = transport.replace("-", "_")
+
+        # Stdio rules
+        if transport == "stdio":
+            cmd = config.get("command")
+            if not isinstance(cmd, str) or not cmd.strip():
+                raise ValueError("Stdio requires valid 'command'")
+
+            if "args" in config:
+                args = config["args"]
+                if not isinstance(args, list) or not all(isinstance(a, str) for a in args):
+                    raise ValueError("'args' must be list of strings")
+
+            if "url" in config:
+                raise ValueError("Stdio cannot have 'url'")
+
+        # Remote rules
+        else:
+            url = config.get("url")
+            if not isinstance(url, str) or not url.strip():
+                raise ValueError(f"{transport} requires valid 'url'")
+
+            if not url.startswith(("http://", "https://")):
+                raise ValueError("URL must start with http/https")
+
+        return True
 
 class MCPService:
     def __init__(self):
@@ -44,7 +77,7 @@ class MCPService:
             except Exception:
                 continue
         
-        # Ensure the built-in 'tls' toolset is always present
+        # Ensure the built-in tls toolset is always present
         if "tls" not in servers:
             default_tls = {
                 "transport": "stdio",
@@ -60,7 +93,6 @@ class MCPService:
         """Kills existing subprocesses and initializes a fresh client."""
         if self.current_client:
             try:
-                # Prevent zombie 'uv' processes on your system
                 await self.current_client.close()
             except Exception:
                 pass
@@ -70,7 +102,7 @@ class MCPService:
     
     async def validate_server(self, config_dict: dict):
         """Pre-save validation to prevent graph crashes."""
-        # 1. Schema Check (Throws ValidationError if keys are missing)
+        # 1. Schema Check 
         srv = MCPServerSchema(**config_dict)
         
         # 2. Connectivity Check
